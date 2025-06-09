@@ -1,5 +1,4 @@
 let http = require('http');
-const querystring = require('query-string');
 
 /**
  * Request 模拟请求封装
@@ -51,7 +50,7 @@ class Request {
     let options = {
       host: host,
       port: 80,
-      path: path + querystring.stringify(data),
+      path: path,
       method: 'GET',
       encoding: null,
       headers: {
@@ -99,26 +98,12 @@ class Request {
     console.log('---------httpPost---------------');
     console.log(data);
     let options = {
-      host: host,
+      hostname: host,
       port: '80',
       path: path,
       formData: data,
       method: 'post',
-      headers: Object.assign(
-        {
-          // 'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36'
-          // 'Content-Length': Buffer.byteLength(data) // 返回字符串实际占据的字节长度
-        },
-        headers
-      )
     };
-    // 判断是否为https请求
-    if (status) {
-      http = require('https');
-      options.port = 443;
-    }
     console.log(options);
     return this.PromiseData(options);
   }

@@ -1,11 +1,10 @@
 const mysql = require('mysql2');
-const config = require('../config');
 const moment = require('moment');
 const pool = mysql.createConnection({
-  host: config.db.host,
-  user: config.db.username,
-  password: config.db.password,
-  database: config.db.database,
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
   connectionLimit: 10, // 控制最大连接数
   waitForConnections: true, // 启用排队机制
   idleTimeoutMillis: 60000, // 空闲连接回收时间
@@ -40,6 +39,7 @@ let queryAction = async (sql, successText, callback) => {
   try {
     pool.query(sql, (err, result) => {
       if (err) {
+        console.error('query error:', err);
         callback({
           code: 400,
           message: err.message,
@@ -69,11 +69,11 @@ let queryAction = async (sql, successText, callback) => {
  * @param {*} tj  --> 筛选条件
  * @param {*} callback  --> 回调函数
  */
-let queryPage = async (sql, page, pageSize, tj, callback) => {
+let queryPage = async (table, page, pageSize, tj, callback, sql_yj) => {
   try {
     
     let start = (page - 1) * pageSize;
-    let totalSql = `SELECT COUNT(*) as total FROM ${sql} ${tj}`;
+    let totalSql = `SELECT COUNT(*) as total FROM ${table} ${tj}`;
     await queryAction(totalSql, null, async (result) => {
       console.log(result)
       if (result?.code == 400) {
@@ -81,9 +81,10 @@ let queryPage = async (sql, page, pageSize, tj, callback) => {
         return;
       }
       let total = result ? result[0].total : 0;
-      let pageSql = `SELECT * FROM ${sql} ${tj}  ORDER BY create_at DESC LIMIT ${start}, ${pageSize}`;
+      let pageSql = (sql_yj ?? `SELECT * FROM ${table} ${tj}`)+`  ORDER BY create_at DESC LIMIT ${start}, ${pageSize}`;
       queryAction(pageSql, '', (res) => {
         if (res.code) {
+          console.log(res)
           callback(res);
           return;
         }
@@ -105,6 +106,7 @@ let queryPage = async (sql, page, pageSize, tj, callback) => {
       });
     });
   } catch (err) {
+    console.log(err)
     callback(null);
   }
 };
@@ -132,6 +134,90 @@ let queryAdd = async (tableName, data, callback) => {
   }
 };
 
+// 封装数据更新方法
+let queryUpdate = async (tableName, data, id, callback) => {
+  try {
+    let sql = `UPDATE ${tableName} SET ${Object.keys(data).map(key => `${key} = ?`).join(',')} WHERE id = ?`;
+    pool.query(sql, [...Object.values(data), id], (err, result) => {
+      if (err) {
+        callback({
+          code: 400,
+          message: err.message,
+          data: result
+        });
+      } else {
+        callback({
+          code: 200,
+          message: '更新成功',
+          data: result
+        });
+      }
+    });
+  } catch (err) {
+    callback(null);
+  }
+};
+// 封装数据删除方法
+let queryDelete = async (tableName, id, callback) => {
+  try {
+    let where = ''
+    if (Array.isArray(id)) {
+      where = `WHERE id IN (${id.map(() => '?').join(',')})`
+    } else {
+      where = `WHERE id = ?`
+    }
+    let sql = `DELETE FROM ${tableName} ${where}`;
+    const idArr = Array.isArray(id)? id : [id]
+    pool.query(sql, idArr, (err, result) => {
+      if (err) {
+        callback({
+          code: 400,
+          message: err.message,
+          data: result
+        });
+      } else {
+        callback({
+          code: 200,
+          message: '删除成功',
+          data: result
+        });
+      }
+    });
+  } catch (err) {
+    callback(null);
+  }
+};
+
+// 封装数据查询方法
+let queryFind = async (tableName, id, callback) => {
+  try {
+    let where = ''
+    if (Array.isArray(id)) {
+      where = `WHERE id IN (${id.map(() => '?').join(',')})`
+    } else {
+      where = `WHERE id = ?`
+    }
+    let sql = `SELECT * FROM ${tableName} ${where}`;
+    const idArr = Array.isArray(id)? id : [id]
+    pool.query(sql, idArr, (err, result) => {
+      if (err) {
+        callback({
+          code: 400,
+          message: err.message,
+          data: result
+        });
+      } else {
+        callback({
+          code: 200,
+          message: '查询成功',
+          data: result[0] || {}
+        });
+      }
+    });
+  } catch (err) {
+    callback(null);
+  }
+};
 // 统一的接口输出
 const sqlExport = (res, result) => {
   if (!result){
@@ -146,4 +232,7 @@ module.exports = pool;
 module.exports.queryAction = queryAction;
 module.exports.queryPage = queryPage;
 module.exports.queryAdd = queryAdd;
+module.exports.queryUpdate = queryUpdate;
+module.exports.queryDelete = queryDelete;
 module.exports.sqlExport = sqlExport;
+module.exports.queryFind = queryFind;

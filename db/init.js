@@ -1,13 +1,13 @@
 const mysql = require('mysql2');
-const config = require('../config');
+require('dotenv').config();
 
 const pool = mysql.createConnection({
-  host: config.db.host,
-  user: config.db.username,
-  password: config.db.password,
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
 });
-
-const createDatabaseSql = `CREATE DATABASE IF NOT EXISTS ${config.db.database}`;
+console.log('Connected to MySQL database', process.env.DB_HOST);
+const createDatabaseSql = `CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`;
 pool.query(createDatabaseSql, (err, results, fields) => {
   if (err) {
     return console.error('Error creating database:', err.message);
@@ -15,7 +15,7 @@ pool.query(createDatabaseSql, (err, results, fields) => {
   console.log('Database created successfully');
 });
 // 切换到新创建的数据库
-pool.changeUser({database: config.db.database}, err => {
+pool.changeUser({database: process.env.DB_NAME}, err => {
     if (err) {
       return console.error('Error changing user:', err.message);
     }
@@ -25,11 +25,13 @@ pool.changeUser({database: config.db.database}, err => {
 const createTableSql = `CREATE TABLE IF NOT EXISTS sys_user (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) NOT NULL,
+    password VARCHAR(100) NOT NULL,
     avatar TEXT,
+    email VARCHAR(100),
     ip VARCHAR(100),
     address VARCHAR(100),
     system VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`;
 // 文章表
 const createArticleTableSql = `CREATE TABLE IF NOT EXISTS sys_article (
@@ -46,7 +48,7 @@ const createArticleTableSql = `CREATE TABLE IF NOT EXISTS sys_article (
 const createArticleTypeTableSql = `CREATE TABLE IF NOT EXISTS sys_article_type (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`;
 //   树洞表
 const createTreeholeTableSql = `CREATE TABLE IF NOT EXISTS sys_treehole (
@@ -76,7 +78,7 @@ const createCommentTableSql = `CREATE TABLE IF NOT EXISTS sys_comment (
     longitude VARCHAR(100),
     latitude VARCHAR(100),
     system VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   )`;
   // 友联表
@@ -99,8 +101,42 @@ const createCommentTableSql = `CREATE TABLE IF NOT EXISTS sys_comment (
     type INT,
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`;
-
-  const sqls = [createTableSql, createArticleTableSql, createArticleTypeTableSql, createTreeholeTableSql, createCommentTableSql, createVisitorTableSql, createLinkTableSql, createProjectTableSql];
+  // 菜单表
+  const createMenuTableSql = `CREATE TABLE IF NOT EXISTS sys_menu (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    menu_name VARCHAR(100) NOT NULL,
+    menu_type INT,
+    url VARCHAR(255) NOT NULL,
+    icon VARCHAR(255),
+    parent_id INT,
+    open_type INT,
+    sort INT,
+    visible INT,
+    remark VARCHAR(255),
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  )`;
+  // 发现表
+  const createFindTableSql = `CREATE TABLE IF NOT EXISTS sys_find (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    url VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    image_url VARCHAR(255),
+    type VARCHAR(100),
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  )`;
+  // 发现-类型表
+  const createFindTypeTableSql = `CREATE TABLE IF NOT EXISTS sys_find_type (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    image_url VARCHAR(255),
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  )`;
+  // 执行sql语句
+  const sqls = [createTableSql, createArticleTableSql, createArticleTypeTableSql, createTreeholeTableSql, createCommentTableSql, createVisitorTableSql, createLinkTableSql, createProjectTableSql, createMenuTableSql, createFindTableSql, createFindTypeTableSql];
   // 执行sql语句
   sqls.forEach(sql => {
     pool.query(sql, (err, results, fields) => {

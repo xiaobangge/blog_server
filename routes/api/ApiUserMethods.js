@@ -3,6 +3,7 @@ const geoip = require("geoip-lite");
 const path = require("path");
 const fs = require("fs");
 const moment = require("moment");
+const bcrypt = require('bcryptjs');
 const jsTimeBy24 = (result) => {
   // 检查输入结果是否为空或不存在长度属性
   if (!result?.length) return false;
@@ -19,8 +20,8 @@ const jsTimeBy24 = (result) => {
   // 返回布尔值，表示时间差是否小于一天
   return diffDays;
 };
-// 获取用户信息
-exports.getUserInfo = async (req, res) => {
+
+exports.intoVisitor = async (req, res) => {
   // console.log(req.body)
   const { ip, location, browser } = req.body;
   const sql1 = `SELECT * FROM sys_visitor WHERE ip = '${ip}'`;
@@ -38,18 +39,23 @@ exports.getUserInfo = async (req, res) => {
       db.queryAdd("sys_visitor", data, () => {});
     }
   });
-  const sql = "SELECT * FROM sys_user WHERE id =1";
+}
+// 获取用户信息
+exports.getUserInfo = async (req, res) => {
+  const sql = "SELECT * FROM sys_user WHERE username='Sean'";
   db.query(sql, (err, result) => {
+    console.log(err)
     if (err) {
       res.status(500).json({
         code: 500,
         message: "服务器错误",
       });
     } else {
+      const data = result?.length > 0 ? {...result[0], password: ''} : null;
       res.status(200).json({
         code: 200,
         message: "获取用户信息成功",
-        data: result?.length > 0 ? result[0] : null,
+        data: data
       });
     }
   });
@@ -130,16 +136,17 @@ exports.getVisitorCount = async (req, res) => {
   const yesterday = moment().subtract(1, "days").format("YYYY-MM-DD");
   const thisMonth = moment().format("YYYY-MM");
   const sql = `
-  SELECT COUNT(*) as todayCount FROM sys_visitor WHERE created_at LIKE '${today}%'
+  SELECT COUNT(*) as todayCount FROM sys_visitor WHERE create_at LIKE '${today}%'
   UNION ALL
-  SELECT COUNT(*) as yesterdayCount FROM sys_visitor WHERE created_at LIKE '${yesterday}%'
+  SELECT COUNT(*) as yesterdayCount FROM sys_visitor WHERE create_at LIKE '${yesterday}%'
   UNION ALL
-  SELECT COUNT(*) as thisMonthCount FROM sys_visitor WHERE created_at LIKE '${thisMonth}%'
+  SELECT COUNT(*) as thisMonthCount FROM sys_visitor WHERE create_at LIKE '${thisMonth}%'
   UNION ALL
   SELECT COUNT(*) as totalCount FROM sys_visitor`;
 
   try {
     db.query(sql, (err, result) => {
+      console.log(err)
       if (err) {
         res.status(500).json({
           code: 500,
@@ -190,6 +197,132 @@ exports.getVisitorAddress = async (req, res) => {
         });
       }
     });
+  } catch (err) {
+    throw err; // 抛出错误
+  }
+};
+
+// 获取用户列表
+exports.getUserList = async (req, res) => {
+  const { page, page_size, start_time, end_time, state, username } = req.body;
+  try {
+    let where = ''
+    if (start_time && end_time) {
+      where = `WHERE create_at BETWEEN '${start_time}' AND '${end_time}'`
+    }
+    if (state) {
+      where += ` AND state = ${state}`
+    }
+    if (username) {
+      where += ` AND username LIKE '%${username}%'`
+    }
+    db.queryPage('sys_user', page, page_size, where, (result) => {
+      const data = {
+        total: result.total,
+        list: result.data.list?.map((item) => ({...item, password: ''}))
+      }
+      res.status(result.code).json({...result, data})
+    });
+  } catch (err) {
+    throw err; // 抛出错误
+  }
+};
+
+// 添加用户
+exports.addUser = async (req, res) => {
+  const { password, username, email, avatar, state } = req.body;
+    let msg = ''
+    if (!username) msg = '用户名不能为空';
+    if (!password) msg = '密码不能为空';
+    if (!email) msg = '邮箱不能为空';
+    if (msg) {
+      return res.status(400).json({
+        code: 400,
+        message: msg
+      })
+    }
+  try {
+      // 定义 SQL 语句
+    const sql = `SELECT * FROM sys_user WHERE username = '${username}' OR email = '${email}'`
+          // 执行 SQL 语句，根据用户名查询用户的信息
+    db.queryAction(sql,'', (resu) => {
+        const result = resu?.code ? resu.data : resu;
+        if (result?.length) {
+            if (result[0].username === username) {
+                msg = "用户名已存在"
+            } else {
+                msg = "邮箱已存在"
+            }
+            return res.send({ success: false, code: 400, msg });
+        }
+        db.queryAdd("sys_user", { password:bcrypt.hashSync(password), username, email, avatar, state }, (result) => {
+          db.sqlExport(res, result)
+        });
+    })
+  } catch (err) {
+    throw err; // 抛出错误
+  }
+};
+
+// 更新用户
+exports.updateUser = async (req, res) => {
+  const { id, username, email, avatar, type, state } = req.body;
+
+  let row = {}
+  if (type === 'state') {
+    row.state = state
+  } else {
+    let msg = ''
+    if (!username) msg = '用户名不能为空';
+    if (!email) msg = '邮箱不能为空';
+    if (msg) {
+      return res.status(400).json({
+        code: 400,
+        message: msg
+      })
+    }
+    row = { username, email, avatar, state }
+  }
+  try {
+    db.queryUpdate("sys_user", row, id, (result) => {
+      res.status(result.code).json(result)
+    });
+  } catch (err) {
+    throw err; // 抛出错误
+  }
+};
+
+// 删除用户
+exports.deleteUser = async (req, res) => {
+  const { ids } = req.body;
+  try {
+    db.queryDelete("sys_user", ids, (result) => {
+      res.status(result.code).json(result)
+    });
+  } catch (err) {
+    throw err; // 抛出错误
+  }
+};
+
+// 重置密码
+exports.resetPassword = async (req, res) => {
+  const { id, password, newPassword } = req.body;
+  try {
+    // 定义 SQL 语句
+  const sql = `SELECT * FROM sys_user WHERE id = '${id}'`
+        // 执行 SQL 语句，根据用户名查询用户的信息
+  db.queryAction(sql,'', (resu) => {
+      const result = resu?.code ? resu.data : resu;
+      if (!result?.length) {
+          return res.send({ success: false, code: 400, msg: '用户不存在' });
+      }
+          // 验证密码
+      const comRes = bcrypt.compareSync(password, result[0].password)
+      if (!comRes) return res.send({ success: false, code: 400, msg: "用户密码错误" });
+      db.queryUpdate("sys_user", { password:bcrypt.hashSync(newPassword) }, id, (result) => {
+        db.sqlExport(res, result)
+      });
+  })
   } catch (err) {
     throw err; // 抛出错误
   }

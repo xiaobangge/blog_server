@@ -1,0 +1,7 @@
+@url=http://localhost:7777 
+
+###
+@name=test
+
+###
+get {{url}}/api/test
