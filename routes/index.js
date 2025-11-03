@@ -15,10 +15,13 @@ const ApiMenu = require("./api/ApiMenuMethods");
 const ApiMusic = require("./api/ApiMusicMethods");
 const ApiFind = require("./api/ApiFindMethods");
 const ApiVideo = require("./api/ApiVideoMethods");
+const ApiVisit = require("./api/ApiVisitMethods");
 
 // 获取用户信息
 router.post('/user/info', ApiUser.getUserInfo);
 router.post('/user/visitor', ApiUser.intoVisitor);
+router.post('/visitor/area', ApiUser.getVisitorCountByArea);
+router.post('/user/log', ApiUser.getNews);
 
 // 发送邮箱验证码
 router.post('/user/sendMailCode', ApiLogin.sendMailCode);
@@ -159,6 +162,19 @@ router.post('/menu/create', ApiMenu.createMenu);
 router.post('/menu/update', ApiMenu.updateMenu);
 // 菜单删除
 router.post('/menu/delete', ApiMenu.deleteMenu);
+
+// 获取访店列表
+router.post('/visit/list', ApiVisit.getVisitList)
+// 添加访店
+router.post('/visit/add', ApiVisit.addFVisit)
+// 编辑访店
+router.post('/visit/update', ApiVisit.updateVisit)
+// 删除访店
+router.post('/visit/delete', ApiVisit.deleteVisit)
+// 获取访店信息
+router.post('/visit/info', ApiVisit.getVisitInfo)
+// 导出表数据
+router.post('/visit/export', ApiVisit.exportVisit)
 
 router.post('/video/list/:type', ApiVideo.getVideoTypeList)
 router.post('/video/get/:vid', ApiVideo.getVideoDetail)

@@ -1,6 +1,7 @@
 const db = require("../../db/sql");
 const {sendEmailFun} = require("../../utils/nodemailer")
 const moment = require('moment');
+const {addLog} = require("../../utils/log");
 const filterList = (data, list, data1) => {
   const arr = data.map(item => {
     const target = list.filter(item1 => item1.target_id === item.id)
@@ -25,7 +26,7 @@ exports.getMoments = async (req, res) => {
     db.queryPage('sys_comment',page, pageSize, tj, (result) => {
       const list = result.data?.list || []
       const idList = list.map(item => item.id)
-      const tj1 = `WHERE ${type ? `type='${type}' AND` : ''} pid in (${idList.join(',')})`
+      const tj1 = `WHERE ${type ? `type='${type}'` : ''} ${idList?.length ? "AND pid in (" +idList.join(',')+")" : '' }`
       db.queryPage('sys_comment',page, 10000, tj1, (result1) => {
         const list1 = result1?.data?.list || []
         const data = filterList(list, list1, list)
@@ -66,6 +67,7 @@ exports.addMoments = (req, res) => {
     title: '评论通知',
     info: {}
   }
+  const logType = type === 'comment'? 4 : type === 'link'? 1 : type === 'article' ? 2 : 3
   // 留言功能，发送邮箱到博主
   if (!target_id) {
     row.title = '您的博客有新的留言'
@@ -74,9 +76,10 @@ exports.addMoments = (req, res) => {
       comment: content,
       time: moment().format('YYYY-MM-DD HH:mm:ss')
     }
+    addLog({...req.body, type: logType})
     sendEmailFun(row)
   } else {
-    const sql = `SELECT content from sys_comment WHERE id='${target_id}'`
+    const sql = `SELECT * from sys_comment WHERE id='${target_id}'`
     db.queryAction(sql, '', (result) => {
       const comment = result[0].content
       row.title = '您在Sean博客的评论有了新回复'
@@ -87,6 +90,7 @@ exports.addMoments = (req, res) => {
         reply: content,
         time: moment().format('YYYY-MM-DD HH:mm:ss')
       }
+      addLog({...req.body, type: logType, bhf: {...result[0]}})
       sendEmailFun(row)
     })
   }

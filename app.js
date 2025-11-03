@@ -10,8 +10,8 @@ let indexRouter = require("./routes/index");
 //token解析中间件 一定要在路由之前配置解析 Token 的中间件
 const expressJWT = require("express-jwt");
 let app = express();
-require("./utils/swaggerUI")(app);
 app.use(cors());
+require("./utils/swaggerUI")(app);
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 app.use("/file", express.static(path.join(__dirname, "public")));

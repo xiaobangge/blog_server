@@ -7,7 +7,7 @@ const pool = mysql.createConnection({
   database: process.env.DB_NAME,
   connectionLimit: 10, // 控制最大连接数
   waitForConnections: true, // 启用排队机制
-  idleTimeoutMillis: 60000, // 空闲连接回收时间
+  waitTimeout: 60000, // 空闲连接回收时间
   multipleStatements: true // 支持批量语句
 });
 

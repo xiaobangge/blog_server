@@ -2,6 +2,7 @@ const db = require("../../db/sql");
 const path = require("path");
 const fs = require("fs");
 const moment = require("moment");
+const {addLog} = require("../../utils/log");
 exports.getArticleTypeList = (req, res) => {
   const sql = "SELECT * FROM sys_article_type";
   db.queryAction(sql, "获取文章类型列表成功", (result) => {
@@ -77,6 +78,11 @@ exports.getArticleDetail = (req, res) => {
       console.log(result)
       const info = result?.[0] || null;
       const code = result?.code || 200;
+      addLog({
+        type: 5,
+        sourceName: info?.title,
+        articleId: id
+      })
       res.status(code).json({
         code: code,
         data:

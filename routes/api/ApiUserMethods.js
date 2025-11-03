@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const moment = require("moment");
 const bcrypt = require('bcryptjs');
+const {addLog} = require("../../utils/log");
 const jsTimeBy24 = (result) => {
   // 检查输入结果是否为空或不存在长度属性
   if (!result?.length) return false;
@@ -24,11 +25,12 @@ const jsTimeBy24 = (result) => {
 exports.intoVisitor = async (req, res) => {
   // console.log(req.body)
   const { ip, location, browser } = req.body;
-  const sql1 = `SELECT * FROM sys_visitor WHERE ip = '${ip}'`;
   const ipInfo = geoip.lookup(ip);
+  const sql1 = `SELECT * FROM sys_visitor WHERE ip = '${ip}' OR (longitude = '${ipInfo?.ll[0]}' AND latitude = '${ipInfo?.ll[1]}')`;
   db.query(sql1, (err, result) => {
     const maxTime = jsTimeBy24(result);
-    if (!maxTime) {
+    console.log(result, 'result-----')
+    if (!result?.length) {
       const data = {
         ip,
         address: location,
@@ -36,8 +38,12 @@ exports.intoVisitor = async (req, res) => {
         latitude: ipInfo?.ll[0] || "",
         longitude: ipInfo?.ll[1] || "",
       };
+      addLog({type: 9, matter: '有人来访', sourceName: location, ip: ip})
       db.queryAdd("sys_visitor", data, () => {});
+    } else if (!maxTime) {
+      addLog({type: 9, matter: '有人来访', sourceName: location, ip: ip})
     }
+    res.send({ code: 200, message: "成功" });
   });
 }
 // 获取用户信息
@@ -130,6 +136,30 @@ exports.getExpression = (req, res) => {
   });
 };
 
+// 按地区统计访客数量
+exports.getVisitorCountByArea = async (req, res) => {
+  const sql = `
+  SELECT address, COUNT(*) as count FROM sys_visitor GROUP BY address ORDER BY count DESC`;
+
+  try {
+    db.query(sql, (err, result) => {
+      if (err) {
+        res.status(500).json({
+          code: 500,
+          message: "服务器错误",
+        });
+      } else {
+        res.status(200).json({
+          code: 200,
+          message: "获取访客统计信息成功",
+          data: result,
+        });
+      }
+    });
+  } catch (err) {
+    throw err; // 抛出错误
+  }
+};
 // 统计今日访客数量、昨日访客数量、本月访客数量、总访客数量
 exports.getVisitorCount = async (req, res) => {
   const today = moment().format("YYYY-MM-DD");
@@ -323,6 +353,29 @@ exports.resetPassword = async (req, res) => {
         db.sqlExport(res, result)
       });
   })
+  } catch (err) {
+    throw err; // 抛出错误
+  }
+};
+
+// 获取最新动态
+exports.getNews = async (req, res) => {
+  const { page=1, page_size=25, start_time, end_time, type } = req.body;
+  try {
+    let where = ''
+    if (start_time && end_time) {
+      where = `WHERE create_at BETWEEN '${start_time}' AND '${end_time}'`
+    }
+    if (type) {
+      where += ` AND type = ${type}`
+    }
+    db.queryPage('sys_log', page, page_size, where, (result) => {
+      const data = {
+        total: result.total,
+        list: result.data.list
+      }
+      res.status(result.code).json({...result, data})
+    });
   } catch (err) {
     throw err; // 抛出错误
   }

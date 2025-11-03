@@ -135,8 +135,66 @@ const createCommentTableSql = `CREATE TABLE IF NOT EXISTS sys_comment (
     create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   )`;
+
+  // 日志表
+  const createLogTableSql = `CREATE TABLE IF NOT EXISTS sys_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    articleId INT,
+    avatarUrl VARCHAR(255),
+    bhfAvatar VARCHAR(255),
+    bhfName VARCHAR(100),
+    matter VARCHAR(100),
+    sourceName VARCHAR(100),
+    time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`
+  // 动态表
+  const createDynamicTableSql = `CREATE TABLE IF NOT EXISTS sys_dynamics (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    content TEXT NOT NULL,
+    like_count INT,
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`
+  // 访店表
+  const createVisitTableSql = `CREATE TABLE IF NOT EXISTS sys_visit (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100),
+    address VARCHAR(100),
+    date VARCHAR(100),
+    customer VARCHAR(100),
+    type VARCHAR(100),
+    keyman VARCHAR(100),
+    position VARCHAR(100),
+    phone VARCHAR(100),
+    jmType VARCHAR(100),
+    number VARCHAR(100),
+    sort VARCHAR(100),
+    decision VARCHAR(100),
+    pirce VARCHAR(100),
+    intention VARCHAR(100),
+    activity VARCHAR(100),
+    remark VARCHAR(100),
+    create_by VARCHAR(100),
+    create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  )`
   // 执行sql语句
-  const sqls = [createTableSql, createArticleTableSql, createArticleTypeTableSql, createTreeholeTableSql, createCommentTableSql, createVisitorTableSql, createLinkTableSql, createProjectTableSql, createMenuTableSql, createFindTableSql, createFindTypeTableSql];
+  const sqls = [createTableSql,
+     createArticleTableSql,
+     createArticleTypeTableSql,
+     createTreeholeTableSql,
+     createCommentTableSql,
+     createVisitorTableSql,
+     createLinkTableSql,
+     createProjectTableSql,
+     createMenuTableSql,
+     createFindTableSql,
+     createFindTypeTableSql,
+     createLogTableSql,
+     createDynamicTableSql,
+     createVisitTableSql
+  ];
   // 执行sql语句
   sqls.forEach(sql => {
     pool.query(sql, (err, results, fields) => {
