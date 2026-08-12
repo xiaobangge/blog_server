@@ -5,12 +5,9 @@ const pool = mysql.createConnection({
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  connectionLimit: 10, // 控制最大连接数
-  waitForConnections: true, // 启用排队机制
-  waitTimeout: 60000, // 空闲连接回收时间
-  multipleStatements: true // 支持批量语句
+  connectionLimit: 10,
+  connectTimeout: 60000
 });
-
 // 心跳包逻辑
 setInterval(async () => {
   try {

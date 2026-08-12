@@ -16,6 +16,7 @@ const ApiMusic = require("./api/ApiMusicMethods");
 const ApiFind = require("./api/ApiFindMethods");
 const ApiVideo = require("./api/ApiVideoMethods");
 const ApiVisit = require("./api/ApiVisitMethods");
+const ApiCloumn = require('./api/ApiAddColumn')
 
 // 获取用户信息
 router.post('/user/info', ApiUser.getUserInfo);
@@ -182,4 +183,7 @@ router.post('/video/get/:vid', ApiVideo.getVideoDetail)
 router.post('/music/type/:type', ApiMusic.getMusicTypeList)
 router.get('/music/list/:id', ApiMusic.getMusicList)
 router.post('/music/get', ApiMusic.getMusicInfo)
+
+// 添加表格列
+router.post('/column/add', ApiCloumn.addColumnByTable)
 module.exports = router;

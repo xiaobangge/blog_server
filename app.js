@@ -29,7 +29,6 @@ function authenticateToken(req, res, next) {
   const NeedToken = req.headers['needtoken']
   if (!NeedToken || whiteList.includes(req.url)) next();
   else {
-    console.log(req.url)
     const token = authHeader && authHeader.split(' ')[1]; // 从 "Bearer token" 中提取token
     if (token == null) return res.status(200).json({ code: 401, message: "没有token" }); // 没有token，返回401
     jwt.verify(token, process.env.JWD_KEY, (err, user) => {
